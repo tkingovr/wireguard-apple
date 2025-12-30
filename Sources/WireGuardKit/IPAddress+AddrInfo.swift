@@ -8,10 +8,11 @@ extension IPv4Address {
     init?(addrInfo: addrinfo) {
         guard addrInfo.ai_family == AF_INET else { return nil }
 
-        let addressData = addrInfo.ai_addr.withMemoryRebound(to: sockaddr_in.self, capacity: MemoryLayout<sockaddr_in>.size) { ptr -> Data in
-            return Data(bytes: &ptr.pointee.sin_addr, count: MemoryLayout<in_addr>.size)
-        }
+        // Copy to aligned struct to avoid arm64e alignment crash
+        var sockaddrIn = sockaddr_in()
+        memcpy(&sockaddrIn, addrInfo.ai_addr, MemoryLayout<sockaddr_in>.size)
 
+        let addressData = withUnsafeBytes(of: &sockaddrIn.sin_addr) { Data($0) }
         self.init(addressData)
     }
 }
@@ -20,10 +21,11 @@ extension IPv6Address {
     init?(addrInfo: addrinfo) {
         guard addrInfo.ai_family == AF_INET6 else { return nil }
 
-        let addressData = addrInfo.ai_addr.withMemoryRebound(to: sockaddr_in6.self, capacity: MemoryLayout<sockaddr_in6>.size) { ptr -> Data in
-            return Data(bytes: &ptr.pointee.sin6_addr, count: MemoryLayout<in6_addr>.size)
-        }
+        // Copy to aligned struct to avoid arm64e alignment crash
+        var sockaddrIn6 = sockaddr_in6()
+        memcpy(&sockaddrIn6, addrInfo.ai_addr, MemoryLayout<sockaddr_in6>.size)
 
+        let addressData = withUnsafeBytes(of: &sockaddrIn6.sin6_addr) { Data($0) }
         self.init(addressData)
     }
 }
